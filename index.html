@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess3D — Interactive 3D Chess</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- ======================= LAYOUT ======================= -->
+<div id="app">
+
+  <!-- ============ LEFT PANEL ============ -->
+  <aside id="left-panel" class="panel">
+
+    <!-- Black player (top) -->
+    <div class="player-box" id="player-black-box">
+      <div class="avatar black-av">♚</div>
+      <div>
+        <div class="player-name">Black</div>
+        <div id="captured-white" class="captured-pieces"></div>
+      </div>
+      <div class="player-timer" id="timer-black">—</div>
+    </div>
+
+    <!-- Material diff -->
+    <div class="captured-section">
+      <div class="material-diff" id="material-diff"></div>
+    </div>
+
+    <!-- Game status -->
+    <div id="game-status">White's turn</div>
+
+    <!-- White player (bottom) -->
+    <div class="player-box" id="player-white-box" style="margin-top:auto">
+      <div class="avatar">♔</div>
+      <div>
+        <div class="player-name">White</div>
+        <div id="captured-black" class="captured-pieces"></div>
+      </div>
+      <div class="player-timer active" id="timer-white">—</div>
+    </div>
+
+    <!-- Mode & difficulty -->
+    <div class="mode-select">
+      <label for="game-mode">Game Mode</label>
+      <select id="game-mode">
+        <option value="human">Human vs Human</option>
+        <option value="ai-black">Play as White vs AI</option>
+        <option value="ai-white">Play as Black vs AI</option>
+      </select>
+    </div>
+
+    <div class="mode-select" id="difficulty-section">
+      <label>AI Difficulty: <span id="difficulty-label">Medium</span></label>
+      <input type="range" id="ai-difficulty" min="0" max="20" value="10" />
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-primary" id="btn-new-game">
+        <span class="btn-icon">⟳</span> New Game
+      </button>
+      <button class="btn btn-secondary" id="btn-undo">
+        <span class="btn-icon">↩</span> Undo Move
+      </button>
+      <button class="btn btn-secondary" id="btn-flip">
+        <span class="btn-icon">⇅</span> Flip Board
+      </button>
+      <button class="btn btn-secondary" id="btn-pgn">
+        <span class="btn-icon">📋</span> Copy PGN
+      </button>
+    </div>
+
+    <!-- Thinking indicator -->
+    <div id="thinking-indicator" class="thinking-indicator">
+      <div class="spinner"></div>
+      Engine thinking…
+    </div>
+
+  </aside><!-- /left-panel -->
+
+
+  <!-- ============ CENTER (board) ============ -->
+  <main id="center-panel">
+    <div id="board-container">
+      <canvas id="board-canvas"></canvas>
+    </div>
+
+    <!-- Eval bar -->
+    <div id="eval-bar-container">
+      <div id="eval-bar-label">Evaluation</div>
+      <div id="eval-bar-track">
+        <div id="eval-bar-fill" style="width:50%"></div>
+      </div>
+      <div id="eval-score">0.00</div>
+    </div>
+
+    <!-- Promotion dialog -->
+    <div id="promotion-dialog" style="display:none">
+      <h3>Promote Pawn</h3>
+      <div class="promo-choices">
+        <button class="promo-btn" data-piece="q">♕</button>
+        <button class="promo-btn" data-piece="r">♖</button>
+        <button class="promo-btn" data-piece="b">♗</button>
+        <button class="promo-btn" data-piece="n">♘</button>
+      </div>
+    </div>
+  </main><!-- /center-panel -->
+
+
+  <!-- ============ RIGHT PANEL ============ -->
+  <aside id="right-panel" class="panel">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="moves-tab">Moves</button>
+      <button class="tab-btn"        data-tab="analysis-tab">Analysis</button>
+      <button class="tab-btn"        data-tab="gm-tab">Grandmaster</button>
+    </div>
+
+    <!-- Tab 1: Move list -->
+    <div id="moves-tab" class="tab-content active">
+      <div id="moves-grid" class="moves-grid"></div>
+    </div>
+
+    <!-- Tab 2: Analysis -->
+    <div id="analysis-tab" class="tab-content">
+
+      <div class="analysis-card">
+        <h4>Position Evaluation</h4>
+        <div class="eval-big" id="eval-big">0.00</div>
+        <div class="best-move-row">
+          <span style="font-size:12px;color:var(--text-dim)">Best move:</span>
+          <span class="best-move-badge" id="best-move-badge">—</span>
+        </div>
+        <div id="last-move-quality" class="move-quality-indicator" style="display:none"></div>
+        <button class="btn btn-secondary" id="analyze-btn" style="margin-top:10px;width:100%">
+          🔍 Deep Analyze
+        </button>
+      </div>
+
+      <div class="analysis-card">
+        <h4>Opening</h4>
+        <div class="opening-name" id="opening-name">Starting Position</div>
+        <div class="opening-eco"  id="opening-eco"></div>
+      </div>
+
+      <div class="analysis-card" style="font-size:12px;color:var(--text-dim);line-height:1.6">
+        <h4>Move Classification</h4>
+        <div>
+          <span class="move-quality-indicator quality-brilliant" style="display:inline-block;margin:2px">!! Brilliant</span>
+          <span class="move-quality-indicator quality-great"     style="display:inline-block;margin:2px">! Great</span>
+          <span class="move-quality-indicator quality-good"      style="display:inline-block;margin:2px">Good</span>
+          <span class="move-quality-indicator quality-inaccuracy"style="display:inline-block;margin:2px">?! Inaccuracy</span>
+          <span class="move-quality-indicator quality-mistake"   style="display:inline-block;margin:2px">? Mistake</span>
+          <span class="move-quality-indicator quality-blunder"   style="display:inline-block;margin:2px">?? Blunder</span>
+        </div>
+      </div>
+
+    </div><!-- /analysis-tab -->
+
+    <!-- Tab 3: Grandmaster -->
+    <div id="gm-tab" class="tab-content">
+      <div id="gm-panel">
+        <div class="gm-empty">
+          <div class="icon">♟</div>
+          <p>Play some moves to see if your game matches a historical grandmaster game.</p>
+        </div>
+      </div>
+    </div><!-- /gm-tab -->
+
+  </aside><!-- /right-panel -->
+
+</div><!-- /app -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ======================= SCRIPTS ======================= -->
+
+<!-- Three.js r128 (local) -->
+<script src="lib/three.min.js"></script>
+<!-- OrbitControls (local, loaded after Three.js) -->
+<script src="lib/OrbitControls.js"></script>
+
+<!-- chess.js (local) -->
+<script src="lib/chess.js"></script>
+
+<!-- Data files -->
+<script src="data/eco-codes.js"></script>
+<script src="data/grandmaster-games.js"></script>
+
+<!-- App modules -->
+<script src="js/sounds.js"></script>
+<script src="js/game.js"></script>
+<script src="js/board3d.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/grandmaster.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
