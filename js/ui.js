@@ -164,6 +164,19 @@ class UI {
     }
   }
 
+  /**
+   * Update the eval bar and score for a game-over state.
+   * @param {boolean|null} winnerIsWhite  true=white wins, false=black wins, null=draw
+   */
+  showGameOver(winnerIsWhite) {
+    const pct  = winnerIsWhite === null ? 50 : winnerIsWhite ? 95 : 5;
+    const text = winnerIsWhite === null ? 'Draw' : winnerIsWhite ? '+M' : '-M';
+    if (this.evalFillEl)      this.evalFillEl.style.width      = `${pct}%`;
+    if (this.evalScoreEl)     this.evalScoreEl.textContent     = text;
+    if (this.evalBigEl)       this.evalBigEl.textContent       = text;
+    if (this.bestMoveBadgeEl) this.bestMoveBadgeEl.textContent = '—';
+  }
+
   showMoveQuality(quality) {
     if (!quality || !this.lastQualityEl) return;
     this.lastQualityEl.textContent  = quality.label + (quality.symbol ? ' ' + quality.symbol : '');

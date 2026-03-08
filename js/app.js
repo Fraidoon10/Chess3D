@@ -146,12 +146,31 @@ class App {
 
     // Update UI
     this._updateUI();
-    this._analyzePosition();
+
+    if (this.game.isGameOver) {
+      this._showGameOverAnalysis();
+    } else {
+      this._analyzePosition();
+    }
+
     this._checkGMMatches();
 
     // AI turn?
     if (!this.game.isGameOver && this._isAITurn()) {
       this._doAIMove();
+    }
+  }
+
+  /** Show game result in the analysis panel (works without Stockfish). */
+  _showGameOverAnalysis() {
+    this.analyzer.stop();
+    this.ui.toast(this.game.statusText, 4000);
+    if (this.game.isCheckmate) {
+      // game.turn is the side that is IN checkmate — so they lost
+      const winnerIsWhite = this.game.turn !== 'w';
+      this.ui.showGameOver(winnerIsWhite);
+    } else {
+      this.ui.showGameOver(null); // stalemate / draw
     }
   }
 
@@ -169,12 +188,26 @@ class App {
     this.aiThinking = true;
     this.ui.showThinking(true);
 
+    // Stockfish unavailable — use the simple fallback mover after a brief
+    // simulated "thinking" pause (400–1000 ms) so the move feels natural.
+    if (!this.analyzer.isAvailable) {
+      setTimeout(() => {
+        this.aiThinking = false;
+        this.ui.showThinking(false);
+        if (!this.game.isGameOver) this._doFallbackAIMove();
+      }, 400 + Math.random() * 600);
+      return;
+    }
+
     const fen = this.game.fen;
     this.analyzer.getBestMove(fen, this.aiSkill, async (bestMoveUCI) => {
       this.aiThinking = false;
       this.ui.showThinking(false);
 
-      if (!bestMoveUCI || this.game.isGameOver) return;
+      if (this.game.isGameOver) return;
+
+      // If engine returned nothing, fall back to a random legal move
+      if (!bestMoveUCI) { this._doFallbackAIMove(); return; }
 
       const from  = bestMoveUCI.slice(0, 2);
       const to    = bestMoveUCI.slice(2, 4);
@@ -183,12 +216,28 @@ class App {
       this._evalBefore = this._currentScore;
       const moveInput  = promo ? { from, to, promotion: promo } : { from, to };
       const move       = this.game.makeMove(moveInput);
-      if (!move) return;
+      if (!move) { this._doFallbackAIMove(); return; }
 
       this.board.clearHighlights();
       await this._animateMove(move);
       this._afterMove(move);
     });
+  }
+
+  /** Fallback AI: pick a random legal move when Stockfish is unavailable. */
+  _doFallbackAIMove() {
+    if (this.game.isGameOver) return;
+    const moves = this.game.legalMoves;
+    if (!moves.length) return;
+    const pick = moves[Math.floor(Math.random() * moves.length)];
+    this._evalBefore = this._currentScore;
+    const moveInput = pick.promotion
+      ? { from: pick.from, to: pick.to, promotion: pick.promotion }
+      : { from: pick.from, to: pick.to };
+    const move = this.game.makeMove(moveInput);
+    if (!move) return;
+    this.board.clearHighlights();
+    this._animateMove(move).then(() => this._afterMove(move));
   }
 
   // ------------------------------------------------------------------ //

@@ -128,6 +128,11 @@ class ChessGame {
     return this.chess.moves({ square, verbose: true });
   }
 
+  /** All legal moves in the current position (verbose) */
+  get legalMoves() {
+    return this.chess.moves({ verbose: true });
+  }
+
   /** Piece at a square */
   pieceAt(square) {
     return this.chess.get(square);
